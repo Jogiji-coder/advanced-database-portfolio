@@ -1,0 +1,131 @@
+SET
+SET
+BEGIN
+
+=== ENTITY INTEGRITY & KEYS ===================================
+TEST 01 [expect 23505] Duplicate Medical Record Number (UNIQUE uq_patient_mrn)
+psql:sql/04_constraint_tests.sql:29: ERROR:  duplicate key value violates unique constraint "uq_patient_mrn"
+DETAIL:  Key (mrn)=(WCB0000001) already exists.
+        -> SQLSTATE 23505
+TEST 02 [expect 23505] Two doctors with the same licence number (UNIQUE uq_doctor_license)
+psql:sql/04_constraint_tests.sql:34: ERROR:  duplicate key value violates unique constraint "uq_doctor_license"
+DETAIL:  Key (license_number)=(D0071423) already exists.
+        -> SQLSTATE 23505
+TEST 03 [expect 428C9] Client tries to supply its own identity value (GENERATED ALWAYS)
+psql:sql/04_constraint_tests.sql:39: ERROR:  cannot insert a non-DEFAULT value into column "patient_id"
+DETAIL:  Column "patient_id" is an identity column defined as GENERATED ALWAYS.
+HINT:  Use OVERRIDING SYSTEM VALUE to override.
+        -> SQLSTATE 428C9
+
+=== DOMAIN / CHECK CONSTRAINTS =================================
+TEST 04 [expect 23514] MRN in the wrong format (CHECK chk_patient_mrn)
+psql:sql/04_constraint_tests.sql:46: ERROR:  new row for relation "patient" violates check constraint "chk_patient_mrn"
+DETAIL:  Failing row contains (22, 12345, Bad, Mrn, 1990-01-01, F, null, null, null, null, null, null, null, 2026-10-28 18:13:25.670278-04, 2026-10-28 18:13:25.670278-04).
+        -> SQLSTATE 23514
+TEST 05 [expect 23514] Unknown blood group C+ (CHECK chk_patient_blood)
+psql:sql/04_constraint_tests.sql:50: ERROR:  new row for relation "patient" violates check constraint "chk_patient_blood"
+DETAIL:  Failing row contains (2, WCB0000002, Maria, Santos, 1985-07-22, F, C+, 443-555-0122, m.santos@mail.example, 33 Aliceanna St, 21231, Paulo Santos, 443-555-0162, 2019-01-15 00:00:00-05, 2026-10-28 18:13:25.670278-04).
+        -> SQLSTATE 23514
+TEST 06 [expect 23514] Malformed phone number (DOMAIN phone_number)
+psql:sql/04_constraint_tests.sql:54: ERROR:  value for domain phone_number violates check constraint "phone_number_check"
+        -> SQLSTATE 23514
+TEST 07 [expect 23514] Malformed e-mail address (DOMAIN email_address)
+psql:sql/04_constraint_tests.sql:58: ERROR:  value for domain email_address violates check constraint "email_address_check"
+        -> SQLSTATE 23514
+TEST 08 [expect 23514] Emergency contact name without a phone (CHECK chk_patient_emergency)
+psql:sql/04_constraint_tests.sql:62: ERROR:  new row for relation "patient" violates check constraint "chk_patient_emergency"
+DETAIL:  Failing row contains (4, WCB0000004, Emily, Carter, 1994-02-18, F, O-, 443-555-0124, e.carter@mail.example, 2910 Elliott St, 21224, Someone, null, 2021-09-30 00:00:00-04, 2026-10-28 18:13:25.670278-04).
+        -> SQLSTATE 23514
+TEST 09 [expect 23514] Appointment that ends before it starts (CHECK chk_appt_time_order)
+psql:sql/04_constraint_tests.sql:67: ERROR:  new row for relation "appointment" violates check constraint "chk_appt_time_order"
+DETAIL:  Failing row contains (41, 2, 1, 2026-12-01 10:00:00-05, 2026-12-01 09:30:00-05, Scheduled, null, 2026-10-28 18:13:25.670278-04).
+        -> SQLSTATE 23514
+TEST 10 [expect 23514] Pharmacy stock driven below zero (CHECK chk_medication_stock)
+psql:sql/04_constraint_tests.sql:71: ERROR:  new row for relation "medication" violates check constraint "chk_medication_stock"
+DETAIL:  Failing row contains (18, 99001-0018-01, Warfarin, Coumadin, Tablet, 5 mg, 0.35, -99100, f).
+        -> SQLSTATE 23514
+TEST 11 [expect 23514] Prescription line with quantity 0 (CHECK chk_item_quantity)
+psql:sql/04_constraint_tests.sql:76: ERROR:  new row for relation "prescription_item" violates check constraint "chk_item_quantity"
+DETAIL:  Failing row contains (1, 9, 6, 500 mg, Once daily, 5, 0).
+        -> SQLSTATE 23514
+TEST 12 [expect 23514] ICD-10 code in an invalid format (CHECK chk_icd10_format)
+psql:sql/04_constraint_tests.sql:80: ERROR:  new row for relation "icd10_code" violates check constraint "chk_icd10_format"
+DETAIL:  Failing row contains (XYZ-1, Not a code, None).
+        -> SQLSTATE 23514
+
+=== REFERENTIAL INTEGRITY ======================================
+TEST 13 [expect 23503] Appointment for a patient that does not exist (FK fk_appt_patient)
+psql:sql/04_constraint_tests.sql:87: ERROR:  insert or update on table "appointment" violates foreign key constraint "fk_appt_patient"
+DETAIL:  Key (patient_id)=(9999) is not present in table "patient".
+        -> SQLSTATE 23503
+TEST 14 [expect 23503] Delete a patient who has clinical history (ON DELETE RESTRICT)
+psql:sql/04_constraint_tests.sql:91: ERROR:  update or delete on table "patient" violates foreign key constraint "fk_appt_patient" on table "appointment"
+DETAIL:  Key (patient_id)=(3) is still referenced from table "appointment".
+        -> SQLSTATE 23503
+TEST 15 [expect 23503] Department head who does not exist, deferred FK forced IMMEDIATE
+SET CONSTRAINTS
+psql:sql/04_constraint_tests.sql:97: ERROR:  insert or update on table "department" violates foreign key constraint "fk_department_head"
+DETAIL:  Key (head_doctor_id)=(999) is not present in table "doctor".
+        -> SQLSTATE 23503
+SET CONSTRAINTS
+
+=== EXCLUSION CONSTRAINTS (NO DOUBLE BOOKING) ===================
+TEST 16 [expect 23P01] Second patient booked into Dr Okafor's 13-Oct 09:00 slot
+psql:sql/04_constraint_tests.sql:105: ERROR:  conflicting key value violates exclusion constraint "ex_appt_no_doctor_overlap"
+DETAIL:  Key (doctor_id, tstzrange(scheduled_start, scheduled_end, '[)'::text))=(1, ["2026-10-13 09:15:00-04","2026-10-13 09:45:00-04")) conflicts with existing key (doctor_id, tstzrange(scheduled_start, scheduled_end, '[)'::text))=(1, ["2026-10-13 09:00:00-04","2026-10-13 09:30:00-04")).
+        -> SQLSTATE 23P01
+TEST 17 [expect 23P01] Tyrone Jackson booked with two doctors at overlapping times
+psql:sql/04_constraint_tests.sql:110: ERROR:  conflicting key value violates exclusion constraint "ex_appt_no_patient_overlap"
+DETAIL:  Key (patient_id, tstzrange(scheduled_start, scheduled_end, '[)'::text))=(3, ["2026-09-02 10:15:00-04","2026-09-02 10:45:00-04")) conflicts with existing key (patient_id, tstzrange(scheduled_start, scheduled_end, '[)'::text))=(3, ["2026-09-02 10:00:00-04","2026-09-02 10:30:00-04")).
+        -> SQLSTATE 23P01
+TEST 18 [expect 00000] A cancelled appointment frees its slot (partial EXCLUDE ... WHERE status <> Cancelled)
+INSERT 0 1
+        -> SQLSTATE 00000
+
+=== BUSINESS RULES (PARTIAL INDEX + TRIGGERS) ===================
+TEST 19 [expect 23505] Second PRIMARY diagnosis on one appointment (partial unique index)
+psql:sql/04_constraint_tests.sql:121: ERROR:  duplicate key value violates unique constraint "ux_diagnosis_one_primary"
+DETAIL:  Key (appointment_id)=(1) already exists.
+        -> SQLSTATE 23505
+TEST 20 [expect 00000] Extra SECONDARY diagnosis on the same appointment is allowed
+INSERT 0 1
+        -> SQLSTATE 00000
+TEST 21 [expect WC002] Diagnosis on an appointment that has not happened yet (trigger)
+psql:sql/04_constraint_tests.sql:129: ERROR:  Diagnosis cannot be recorded: appointment 36 has status Scheduled
+        -> SQLSTATE WC002
+TEST 22 [expect WC001] Penicillin prescribed to James Holloway, who is allergic (trigger)
+INSERT 0 1
+psql:sql/04_constraint_tests.sql:136: ERROR:  Allergy conflict: patient 1 is allergic to Penicillin V Potassium (Severe reaction: Anaphylaxis)
+HINT:  Choose an alternative medication or record a clinical override.
+        -> SQLSTATE WC001
+TEST 23 [expect WC006] Patient registered with a date of birth in the future (trigger)
+psql:sql/04_constraint_tests.sql:141: ERROR:  Date of birth 2026-11-27 is in the future
+        -> SQLSTATE WC006
+TEST 24 [expect 00000] Lab trigger flags potassium 6.8 as CRITICAL and sodium 128 as LOW
+INSERT 0 2
+        -> SQLSTATE 00000
+ appointment_id | test_code | result_value | abnormal_flag 
+----------------+-----------+--------------+---------------
+              1 | K         |        6.800 | C
+              1 | NA        |      128.000 | L
+
+
+=== CORE OPERATION GUARDS: book_appointment() ==================
+TEST 25 [expect WC003] Booking Dr Okafor on a Saturday, when she holds no clinic
+psql:sql/04_constraint_tests.sql:157: ERROR:  Doctor 1 does not hold a clinic session at Sat 07 Nov 2026 10:00 (Baltimore time)
+        -> SQLSTATE WC003
+TEST 26 [expect WC005] Booking an appointment in the past
+psql:sql/04_constraint_tests.sql:161: ERROR:  Cannot book an appointment in the past (2025-01-06 10:00:00-05)
+        -> SQLSTATE WC005
+TEST 27 [expect 00000] Valid booking: Maria Santos with Dr Okafor next Monday 10:00
+ new_appointment_id 
+--------------------
+                 46
+
+        -> SQLSTATE 00000
+TEST 28 [expect 23P01] Same slot requested for Kwame Mensah (friendly message from function)
+psql:sql/04_constraint_tests.sql:169: ERROR:  Slot taken: doctor 1 already has an appointment at 2026-11-02 10:00:00
+        -> SQLSTATE 23P01
+ROLLBACK
+
+Suite finished - transaction rolled back, sample data unchanged.

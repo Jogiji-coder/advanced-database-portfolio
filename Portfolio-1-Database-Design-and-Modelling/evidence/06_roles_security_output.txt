@@ -1,0 +1,66 @@
+SET
+DO
+REVOKE
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+CREATE VIEW
+COMMENT
+GRANT
+CREATE FUNCTION
+Privilege matrix (r=SELECT a=INSERT w=UPDATE, *=selected columns only):
+          object           | kind  | receptionist | doctor | lab_scientist | pharmacist | analyst 
+---------------------------+-------+--------------+--------+---------------+------------+---------
+ appointment               | table | raw*         | rw*    | r             | r          | 
+ department                | table | r            | r      | r             | r          | 
+ diagnosis                 | table |              | raw    |               |            | 
+ doctor                    | table | r            | r      | r             | r          | 
+ doctor_availability       | table | r            | r      | r             | r          | 
+ icd10_code                | table | r            | r      | r             | r          | 
+ lab_order                 | table |              | raw    | rw*           |            | 
+ lab_result                | table |              | r      | raw           |            | 
+ lab_test                  | table | r            | r      | r             | r          | 
+ medication                | table | r            | r      | r             | rw*        | 
+ patient                   | table | raw          | r      |               | r*         | 
+ patient_allergy           | table |              | raw    |               | r          | 
+ postal_area               | table | r            | r      | r             | r          | 
+ prescription              | table |              | raw    |               | rw*        | 
+ prescription_item         | table |              | raw    |               | r          | 
+ specialty                 | table | r            | r      | r             | r          | 
+ v_deidentified_encounters | view  |              |        |               |            | r
+ v_doctor_schedule         | view  | r            | r      |               |            | 
+ v_patient_history         | view  |              | r      |               |            | 
+
+
+Proof 1: a receptionist cannot read diagnoses
+SET
+psql:sql/06_roles_security.sql:109: ERROR:  permission denied for table diagnosis
+RESET
+Proof 2: an analyst sees only de-identified rows
+SET
+ appointment_id | visit_month | age_band | sex | zip3 |    department    |  status   | icd10_code 
+----------------+-------------+----------+-----+------+------------------+-----------+------------
+              1 | 2026-09-01  |       60 | M   | 212  | General Medicine | Completed | I10
+              2 | 2026-09-01  |       50 | M   | 212  | Cardiology       | Completed | R07.9
+              3 | 2026-09-01  |       30 | F   | 212  | General Medicine | Completed | J45.909
+              4 | 2026-09-01  |       10 | F   | 212  | Pediatrics       | Completed | J02.9
+              5 | 2026-09-01  |       20 | M   | 212  | Orthopedics      | Completed | S93.401A
+
+psql:sql/06_roles_security.sql:114: ERROR:  permission denied for table patient
+RESET

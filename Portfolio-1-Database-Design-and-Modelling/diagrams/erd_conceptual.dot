@@ -1,0 +1,34 @@
+digraph Conceptual {
+  graph [rankdir=LR, nodesep=0.6, ranksep=1.1, pad=0.4, fontname="Inter", label=<<B>Wayne's Clinic Baltimore — Conceptual ER Model</B><BR/><FONT POINT-SIZE="11" COLOR="#475569">Entities and business relationships (Crow's Foot). Attributes are shown in the logical ERD.</FONT>>, labelloc=t, fontsize=20];
+  node [shape=box, style="rounded,filled", fontname="Inter", fontsize=13, fontcolor=white, margin="0.25,0.12", penwidth=0];
+  edge [fontname="Inter", fontsize=10, fontcolor="#334155", color="#475569", penwidth=1.3, dir=both];
+  "Patient" [fillcolor="#1d4ed8"];
+  "Doctor" [fillcolor="#6d28d9"];
+  "Department" [fillcolor="#6d28d9"];
+  "Specialty" [fillcolor="#6d28d9"];
+  "Clinic Session" [fillcolor="#6d28d9"];
+  "Appointment" [fillcolor="#0f766e"];
+  "Diagnosis" [fillcolor="#15803d"];
+  "ICD-10 Code" [fillcolor="#15803d"];
+  "Prescription" [fillcolor="#b45309"];
+  "Medication" [fillcolor="#b45309"];
+  "Lab Order" [fillcolor="#be123c"];
+  "Lab Result" [fillcolor="#be123c"];
+  "Lab Test" [fillcolor="#be123c"];
+  "Postal Area" [fillcolor="#1d4ed8"];
+  "Patient" -> "Appointment" [label="  books  ", arrowtail=teetee, arrowhead=crowodot];
+  "Doctor" -> "Appointment" [label="  attends  ", arrowtail=teetee, arrowhead=crowodot];
+  "Department" -> "Doctor" [label="  employs  ", arrowtail=teetee, arrowhead=crowodot];
+  "Specialty" -> "Doctor" [label="  certifies  ", arrowtail=teetee, arrowhead=crowodot];
+  "Doctor" -> "Clinic Session" [label="  holds  ", arrowtail=teetee, arrowhead=crowodot];
+  "Doctor" -> "Department" [label="  heads  ", arrowtail=teeodot, arrowhead=teeodot];
+  "Appointment" -> "Diagnosis" [label="  results in  ", arrowtail=teetee, arrowhead=crowodot];
+  "ICD-10 Code" -> "Diagnosis" [label="  classifies  ", arrowtail=teetee, arrowhead=crowodot];
+  "Appointment" -> "Prescription" [label="  issues  ", arrowtail=teetee, arrowhead=crowodot];
+  "Prescription" -> "Medication" [label="  lists (M:N via line)  ", arrowtail=crowodot, arrowhead=crowtee];
+  "Patient" -> "Medication" [label="  is allergic to (M:N)  ", arrowtail=crowodot, arrowhead=crowodot];
+  "Appointment" -> "Lab Order" [label="  requests  ", arrowtail=teetee, arrowhead=crowodot];
+  "Lab Order" -> "Lab Result" [label="  produces  ", arrowtail=teetee, arrowhead=crowodot];
+  "Lab Test" -> "Lab Result" [label="  measured by  ", arrowtail=teetee, arrowhead=crowodot];
+  "Postal Area" -> "Patient" [label="  locates  ", arrowtail=teeodot, arrowhead=crowodot];
+}

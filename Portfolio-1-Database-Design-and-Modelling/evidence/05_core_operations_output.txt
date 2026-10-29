@@ -1,0 +1,89 @@
+SET
+SET
+
+================ OPERATION 1: BOOK AN APPOINTMENT ================
+Step 1a - Kevin Park (WCB0000019) asks for a cardiology slot next Monday.
+          Free slots for Dr Priya Raman (doctor_id 3) that morning:
+    slot_start    | slot_end 
+------------------+----------
+ Mon 02 Nov 09:00 | 09:30
+ Mon 02 Nov 09:30 | 10:00
+ Mon 02 Nov 10:00 | 10:30
+ Mon 02 Nov 10:30 | 11:00
+ Mon 02 Nov 11:00 | 11:30
+ Mon 02 Nov 11:30 | 12:00
+ Mon 02 Nov 12:00 | 12:30
+
+Step 1b - Book the 11:00 slot through the booking function:
+          new appointment_id = 48
+Step 1c - Dr Raman's list for that day now shows the booking:
+ start_local | end_local |    mrn     |  patient   |  status   |                reason                 
+-------------+-----------+------------+------------+-----------+---------------------------------------
+ 11:00       | 11:30     | WCB0000019 | Kevin Park | Scheduled | Palpitations after COVID-19 infection
+
+Step 1d - The 11:00 slot is no longer offered:
+ slots_at_11 
+-------------
+           0
+
+
+================ OPERATION 2: STORE A DIAGNOSIS ================
+Zara Ahmed (WCB0000016) is checked in with Dr Okafor today (appointment 34).
+ appointment_id |  status   |      reason       
+----------------+-----------+-------------------
+             34 | CheckedIn | Medication review
+
+The diagnosis, prescription and lab order from one consultation are saved
+as ONE transaction: either all three are stored or none is.
+BEGIN
+ diagnosis_id 
+--------------
+           39
+
+INSERT 0 1
+INSERT 0 1
+COMMIT
+After COMMIT the appointment is Completed and the records are linked to it:
+ appointment_id |  status   | icd10_code | diagnosis_type |                     notes                     
+----------------+-----------+------------+----------------+-----------------------------------------------
+             34 | Completed | F41.1      | Primary        | Review: GAD-7 down from 14 to 8. Sleeping bet
+
+
+================ OPERATION 3: RETRIEVE PATIENT HISTORY ================
+Full history for Tyrone Jackson (WCB0000003), newest first:
+Output format is aligned.
+    event_time    |  event_type  | appt |      clinician      |                                                detail                                                 
+------------------+--------------+------+---------------------+-------------------------------------------------------------------------------------------------------
+ 2026-10-22 09:45 | Lab result   |   30 | Dr Marcus Whitfield | Prothrombin time (INR): 2.1 ratio  [HIGH]
+ 2026-10-21 10:05 | Diagnosis    |   30 | Dr Marcus Whitfield | I48.91 Unspecified atrial fibrillation (Primary)
+ 2026-10-21 09:45 | Appointment  |   30 | Dr Marcus Whitfield | Completed — Cardiology — Anticoagulation (INR) check
+ 2026-10-08 14:15 | Lab result   |   22 | Dr Marcus Whitfield | Prothrombin time (INR): 1 ratio
+ 2026-10-07 14:40 | Prescription |   22 | Dr Marcus Whitfield | Warfarin 5 mg — 5 mg, Once daily in the evening for 30 days (qty 30)
+ 2026-10-07 14:35 | Diagnosis    |   22 | Dr Marcus Whitfield | I48.91 Unspecified atrial fibrillation (Primary)
+ 2026-10-07 14:15 | Appointment  |   22 | Dr Marcus Whitfield | Completed — Cardiology — Palpitations; irregular rhythm on ECG
+ 2026-09-03 10:00 | Lab result   |    2 | Dr Priya Raman      | LDL cholesterol: 162 mg/dL  [HIGH]
+ 2026-09-03 10:00 | Lab result   |    2 | Dr Priya Raman      | Troponin I (high-sensitivity): 8 ng/L
+ 2026-09-03 10:00 | Lab result   |    2 | Dr Priya Raman      | Total cholesterol: 245 mg/dL  [HIGH]
+ 2026-09-02 10:25 | Prescription |    2 | Dr Priya Raman      | Atorvastatin 20 mg — 20 mg, Once daily at night for 90 days (qty 90)
+ 2026-09-02 10:20 | Diagnosis    |    2 | Dr Priya Raman      | R07.9 Chest pain, unspecified (Primary)
+ 2026-09-02 10:20 | Diagnosis    |    2 | Dr Priya Raman      | I25.10 Atherosclerotic heart disease of native coronary artery without angina pectoris (Differential)
+ 2026-09-02 10:00 | Appointment  |    2 | Dr Priya Raman      | Completed — Cardiology — Intermittent chest pain on exertion
+
+History for Zara Ahmed (WCB0000016), including the records just stored:
+    event_time    |  event_type  | appt |                            detail                             
+------------------+--------------+------+---------------------------------------------------------------
+ 2026-10-28 18:13 | Diagnosis    |   34 | F41.1 Generalized anxiety disorder (Primary)
+ 2026-10-28 18:13 | Prescription |   34 | Sertraline 50 mg — 50 mg, Once daily for 90 days (qty 90)
+ 2026-10-28 18:13 | Lab result   |   34 | Thyroid stimulating hormone: 2.1 mIU/L
+ 2026-10-28 09:00 | Appointment  |   34 | Completed — Family Medicine — Medication review
+ 2026-09-22 09:55 | Prescription |   13 | Sertraline 50 mg — 50 mg, Once daily for 30 days (qty 30)
+ 2026-09-22 09:50 | Diagnosis    |   13 | F41.1 Generalized anxiety disorder (Primary)
+ 2026-09-22 09:30 | Appointment  |   13 | Completed — Family Medicine — Persistent worry and poor sleep
+
+Patient summary card: demographics, allergies and active problems in one query
+    mrn     |    patient     | age | blood_group |            allergies            | problem_list  
+------------+----------------+-----+-------------+---------------------------------+---------------
+ WCB0000001 | James Holloway |  68 | O+          | Penicillin V Potassium (Severe) | E11.9, I10
+ WCB0000003 | Tyrone Jackson |  53 | B+          | None recorded                   | I48.91, R07.9
+ WCB0000016 | Zara Ahmed     |  37 | B+          | None recorded                   | F41.1
+
